@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Local variables
+LAN_IF=$1
+
+# Enabling forwarding
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+# Applying SNAT (source NAT) to LAN interface
+iptables -t nat -A POSTROUTING -o $LAN_IF -j MASQUERADE

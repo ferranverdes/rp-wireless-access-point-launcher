@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Flushing old rules
+iptables -F
+iptables -t nat -F
+
+# Deleting non-default chains (user-defined chains)
+iptables -X
+iptables -t nat -X
+
+# Setting default chain policies to ACCEPT on filter table (done by default)
+iptables -P INPUT ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD ACCEPT

@@ -1,0 +1,123 @@
+#!/bin/bash
+
+trap stop_wireless_services INT
+
+is_exit_code_successful () {
+	local exit_code=$1
+	local failed_message=$2
+	
+	if [ $exit_code -ne 0 ]; then
+		echo -e $failed_message
+		echo "[+] Exiting..."
+		exit 1
+	fi
+}
+
+is_valid_interface () {
+	local interface_name=$1
+
+	ifconfig $interface_name &> /dev/null
+	is_exit_code_successful $? "Interface \"$interface_name\" not found."
+}
+
+if [ "$#" -ne 2 ]; then
+	echo "[+] Usage: $0 <ds-interface> <ap-interface>"
+	echo "[+] Example: $0 eth0 wlan0"
+	exit 1;
+fi
+
+# Local variables
+LAN_IF=$1
+WLAN_IF=$2
+CONFIG_FILES_PATH="./configuration-files"
+GATEWAY_IP="10.10.10.1"
+
+is_valid_interface $LAN_IF
+is_valid_interface $WLAN_IF
+
+echo "[+] Interface \"$WLAN_IF\" will be used to create an access point."
+echo "[+] Interface \"$LAN_IF\" is assumed to offer Internet access."
+sleep 3
+
+set_gateway_ip_to_interface () {
+	ifconfig $WLAN_IF $GATEWAY_IP netmask 255.255.255.0
+}
+
+remove_gateway_ip_from_interface() {
+	ifconfig $WLAN_IF 0
+}
+
+start_dhcp_server() {
+	echo -e "INTERFACESv4=\"$WLAN_IF\"" | cat $CONFIG_FILES_PATH/dhcp/isc-dhcp-server - > /etc/default/isc-dhcp-server
+	systemctl start isc-dhcp-server.service
+	is_exit_code_successful $? "\n[-] Unable to start the dhcp service for some reason."
+}
+
+stop_dhcp_server() {
+	systemctl stop isc-dhcp-server.service
+}
+
+flush_iptables() {
+	$CONFIG_FILES_PATH/iptables/flush
+}
+
+set_iptables_to_route_traffic() {
+	flush_iptables
+	$CONFIG_FILES_PATH/iptables/route-traffic $LAN_IF
+	is_exit_code_successful $? "\n[-] Unable to configure iptables for some reason."
+}
+
+start_wireless_access_point() {
+	local config_file=$1
+
+	echo -e "\n[+] Starting wireless access point."
+	echo -e "[+] Press Ctrl+C to stop it.\n"
+
+	set_gateway_ip_to_interface
+	start_dhcp_server
+	set_iptables_to_route_traffic	
+	hostapd $config_file
+}
+
+stop_wireless_services() {
+	echo -e "\n[+] Shutting down services."
+	sleep 1
+
+	stop_dhcp_server
+	flush_iptables
+	remove_gateway_ip_from_interface
+
+	echo "[+] Shutted down."
+	sleep 1
+}
+
+while true; do
+	clear
+	read -rep $'Select from the menu:
+
+\t1) Open Network
+\t2) WPA-PSK (PSK + TKIP)
+\t3) WPA2-PSK (PSK + CCMP)
+
+\t99) Exit
+	
+> ' option
+	case $option in
+		1)
+			# Open Network
+			start_wireless_access_point $CONFIG_FILES_PATH/hostapd/open-network
+			;;
+		2)
+			echo "2"
+			;;
+		99)
+			stop_wireless_services
+			echo -e "\n[+] Exiting..."
+			exit;
+			;;
+		*)
+			echo -e "\n[-] This is not a valid option."
+			sleep 1
+			;;
+	esac
+done

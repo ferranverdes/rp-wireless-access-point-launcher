@@ -1,0 +1,25 @@
+#!/bin/bash
+
+echo -e "[+] Downloading package lists from repositories\n"
+sleep 1
+
+apt update
+
+echo -e "\n[+] Downloaded"
+echo -e "[+] Installing HOST Access Point Daemon (hostapd)\n"
+sleep 1
+
+apt install -y hostapd
+
+echo -e "\n[+] Installing ISC DHCP Server\n"
+sleep 1
+
+apt install -y isc-dhcp-server
+
+echo -e "\n[+] Backing up default configuration file\n"
+
+cp /etc/dhcp/dhcpd.conf /etc/dhcp/dhcpd.conf.ORIGINAL
+
+echo -e "[+] Setting configuration to the DHCP server service\n"
+
+cp ./configuration-files/dhcp/dhcpd.conf /etc/dhcp/
