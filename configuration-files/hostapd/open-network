@@ -1,4 +1,3 @@
-interface=wlan0
 driver=nl80211
 country_code=ES
 hw_mode=g

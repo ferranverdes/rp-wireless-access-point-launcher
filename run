@@ -70,13 +70,15 @@ set_iptables_to_route_traffic() {
 start_wireless_access_point() {
 	local config_file=$1
 
+	echo "interface=$WLAN_IF" | cat - $CONFIG_FILES_PATH/hostapd/$config_file > /tmp/$config_file
+
 	echo -e "\n[+] Starting wireless access point."
 	echo -e "[+] Press Ctrl+C to stop it.\n"
 
 	set_gateway_ip_to_interface
 	start_dhcp_server
 	set_iptables_to_route_traffic	
-	hostapd $config_file
+	hostapd /tmp/$config_file
 }
 
 stop_wireless_services() {
@@ -98,6 +100,7 @@ while true; do
 \t1) Open Network
 \t2) WPA-PSK (PSK + TKIP)
 \t3) WPA2-PSK (PSK + CCMP)
+\t4) WPA2-Enterprise integrated EAP Server
 
 \t99) Exit
 	
@@ -105,10 +108,20 @@ while true; do
 	case $option in
 		1)
 			# Open Network
-			start_wireless_access_point $CONFIG_FILES_PATH/hostapd/open-network
+			start_wireless_access_point open-network
 			;;
 		2)
-			echo "2"
+			# WPA-PSK
+			start_wireless_access_point wpa-psk
+			;;
+		3)
+			# WPA2-PSK
+			start_wireless_access_point wpa2-psk
+			;;
+		4)
+			# WPA2-Enterprise integrated EAP Server
+			echo "TODO"
+			sleep 2
 			;;
 		99)
 			stop_wireless_services
@@ -117,7 +130,7 @@ while true; do
 			;;
 		*)
 			echo -e "\n[-] This is not a valid option."
-			sleep 1
+			sleep 2
 			;;
 	esac
 done
